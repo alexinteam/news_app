@@ -1,6 +1,7 @@
 import * as c from './constants';
 
 let initialState = {
+    news: [],
     business: {articles:[]},
     entertainment: {articles:[]},
     general: {articles:[]},
@@ -34,6 +35,12 @@ const newsReducer = (state = initialState, action) => {
             }else{
                 return {...state, [category.toLowerCase()]:headlines};
             }
+        }
+
+        case 'https://api.rzn.info/v1/news': {
+            let { news } = action;
+
+            return {...state, news }
         }
 
         default:

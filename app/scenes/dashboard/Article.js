@@ -9,7 +9,6 @@ import {
     Dimensions
 } from 'react-native';
 
-import Title from '../../components/Title';
 import * as colors from '../../constants/colors';
 import { getFromNow, getShortDate } from '../../utils/date';
 

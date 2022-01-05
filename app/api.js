@@ -2,7 +2,7 @@ import axios from 'axios';
 
 import * as c from './constants';
 
-export async function getHeadlines(country = "us"){
+export async function getHeadlines(country = "us", page = 1){
     try{
         let requests = [];
         c.CATEGORIES.map((category) => {
@@ -51,5 +51,20 @@ export async function search(query, cancelToken){
         err.isCancel = (axios.isCancel(error));
 
         throw err;
+    }
+}
+
+
+///// rzn
+
+export async function getNews(timestamp = undefined){
+    try{
+        if(timestamp === undefined) {
+            timestamp = Math.round(Date.now() / 1000);
+        }
+        let news = await axios.get('https://api.rzn.info/v1/news' +  '?timestamp='  + timestamp.toString());
+        return news.data
+    } catch (e) {
+        throw new Error(e);
     }
 }

@@ -1,134 +1,124 @@
-
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, ScrollView, View, Text} from 'react-native';
+import {FlatList, View, ActivityIndicator} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux'
 
 import * as api from "../../api";
-import {addHeadlines} from "../../actions";
+import * as c from "../../constants";
+import {addCategoryHeadlines, addNews} from "../../actions";
 import Article from "../../utils";
 
-import Panel from '../../components/Panel'
 import PanelItem from '../../components/PanelItem'
 
-export default function DashBoard(props) {
+export default function Articles(props) {
     const dispatch = useDispatch();
-    const {navigate} = props.navigation;
+    const {navigation} = props;
+    const {navigate} = navigation;
 
     //1 - DECLARE VARIABLES
-    const [error, setError] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [isFetching, setIsFetching] = useState(true);
 
     //Access Redux Store State
     const newsReducer = useSelector(({newsReducer}) => newsReducer);
-    const {business, entertainment, general, health, science, sports, technology} = newsReducer;
+
+    let articles = newsReducer['news'];
 
     //==================================================================================================
-
     //2 - MAIN CODE BEGINS HERE
     useEffect(() => {
         getData();
     }, []);
 
-    //==================================================================================================
-
-    //3 - GET DATA
     async function getData() {
         setIsFetching(true);
 
         try {
-            let data = await api.getHeadlines();
-            dispatch(addHeadlines(data))
+            let timestamp = Math.round(Date.now() / 1000);
+            let data = await api.getNews(timestamp);
+            dispatch(addNews(data, timestamp));
         } catch (error) {
             setError(error);
         } finally {
-            setIsFetching(false)
+            setIsFetching(false);
+        }
+    }
+    //==================================================================================================
+
+    //2 - ON LOAD MORE
+    async function onLoadMore() {
+        if (!isLoadingMore){
+            setIsLoadingMore(true);
+            try {
+                let last = newsReducer['news'].reverse()[0];
+                let data = await api.getNews(last.date);
+                data = newsReducer['news'].concat(data)
+                dispatch(addNews(data, last.date))
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                setIsLoadingMore(false)
+                console.log(newsReducer['news'].length)
+            }
         }
     }
 
     //==================================================================================================
 
-    //4 - RENDER NEWS ITEM - A function that returns a function
-    const renderItem = (size = 'small', horizontal = false, grid = false, wrapper = true) => {
-        return ({item, index}) => {
-            let article = new Article(item, navigate);
-            return <PanelItem {...article} size={size} horizontal={horizontal} grid={grid} wrapper={wrapper}/>
-        };
+    //3 - RENDER NEWS ITEM
+    const renderItem = ({item, index}) => {
+        let article = new Article(item, navigate);
+
+        return (
+            <View style={{flex: 1, flexDirection: 'column', padding: 6}}>
+                <PanelItem {...article}/>
+            </View>
+        );
     };
 
     //==================================================================================================
 
-    //5 - ON CTA PRESS
-    const onCTAPress = (category) => navigate("Articles", {category});
+    //4 - RENDER FOOTER
+    const renderFooter = () => {
+        let footerStyle ={
+            position: 'relative',
+            paddingVertical: 20,
+            marginTop: 10,
+            marginBottom: 10
+        };
+
+        return (
+            <View style={footerStyle}>
+                <ActivityIndicator/>
+            </View>
+        );
+    };
 
     //==================================================================================================
 
-    //6 - RENDER
-    if (isFetching) return <ActivityIndicator style={{paddingVertical: 8}}/>;
-    if (error){
-        return (
-            <View style={{flex:1, justifyContent:"center", alignItems:"center"}}>
-                <Text style={{fontSize: 16}}>
-                    {`${error.message}`}
-                </Text>
-                <Text style={{color: "blue", fontSize: 16, padding: 8}} onPress={getData}>Tap to retry</Text>
-            </View>
-        );
-    }
-
-    let renderDefaultItem = renderItem();
-    let renderHorizontalItem = renderItem(null, true, false, true);
-
-    let renderGridItem = renderItem('small', false, true, false);
-    let renderHorizontalGridItem = renderItem(null, true, true, false);
-
-    let renderSportItem = renderItem('large');
-    let renderTechItem = renderItem('large', false, true);
+    //5 - RENDER
     return (
-        <ScrollView style={{backgroundColor: "#fff"}}>
-            <Panel title={"Business"}
-                   data={business.articles.slice(0, 10)}
-                   renderItem={renderDefaultItem}
-                   onCTAPress={() => onCTAPress("Business")}/>
+        <FlatList
+            data={newsReducer['news']}
+            renderItem={renderItem}
+            numColumns={1}
+            initialNumToRender={10}
+            removeClippedSubviews={true}
 
-            <Panel title={"Entertainment"}
-                   data={entertainment.articles.slice(0, 10)}
-                   renderItem={renderHorizontalItem}
-                   onCTAPress={() => onCTAPress("Entertainment")}/>
+            onRefresh={getData}
+            refreshing={isRefreshing}
 
-            <Panel cols={1}
-                   title={"General"}
-                   data={general.articles.slice(0, 6)}
-                   renderItem={renderHorizontalGridItem}
-                   onCTAPress={() => onCTAPress("General")}/>
+            onEndReached={onLoadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={renderFooter}
 
-            <Panel cols={2}
-                   title={"Health"}
-                   data={health.articles.slice(0, 6)}
-                   renderItem={renderGridItem}
-                   showDivider={false}
-                   onCTAPress={() => onCTAPress("Health")}/>
-
-            <Panel title={"Science"}
-                   data={science.articles.slice(0, 10)}
-                   renderItem={renderDefaultItem}
-                   onCTAPress={() => onCTAPress("Science")}/>
-
-            <Panel title={"Sports"}
-                   data={sports.articles.slice(0, 10)}
-                   renderItem={renderSportItem}
-                   onCTAPress={() => onCTAPress("Sports")}/>
-
-            <Panel cols={1}
-                   title={"Technology"}
-                   data={technology.articles.slice(0, 6)}
-                   renderItem={renderTechItem}
-                   showDivider={false}
-                   onCTAPress={() => onCTAPress("Technology")}/>
-        </ScrollView>
+            contentContainerStyle={{paddingHorizontal: 8}}
+            keyExtractor={(item, index) => `${index.toString()}`}/>
     );
 };
 
-
-DashBoard.navigationOptions = ({navigation}) => {
-    return {title: `MeNews`}
+Articles.navigationOptions = ({navigation}) => {
+    return {
+        title: `${navigation.getParam('category')}`
+    }
 };

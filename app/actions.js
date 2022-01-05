@@ -11,3 +11,9 @@ export const addCategoryHeadlines = (category, headlines, page = 1) => ({
     headlines,
     page
 });
+
+export const addNews = (news, timestamp) => ({
+    type: 'https://api.rzn.info/v1/news',
+    news,
+    timestamp
+});
